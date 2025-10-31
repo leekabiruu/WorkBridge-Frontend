@@ -26,9 +26,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED') {
+      console.warn("Backend server not running. Please start the backend.");
+      return Promise.resolve({ data: { message: "Backend offline" } });
+    }
     if (error.response?.status === 401) {
       console.warn("Unauthorized! Token may have expired.");
-    
     }
     return Promise.reject(error);
   }
