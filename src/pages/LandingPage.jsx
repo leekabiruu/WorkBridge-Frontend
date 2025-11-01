@@ -2,10 +2,10 @@ import React, { useState, useEffect } from "react";
 import Hero from "../components/Hero";
 import JobList from "../components/JobList";
 import CompanySection from "../components/CompanySection";
-import TestimonialSection from "../components/TestimonialSection"; // ✅ Added import
+import TestimonialSection from "../components/TestimonialSection";
 import api from "../services/api";
 import { Link } from "react-router-dom";
-import '../index.css';
+import "../index.css";
 
 function LandingPage() {
   const [featuredJobs, setFeaturedJobs] = useState([]);
@@ -16,8 +16,13 @@ function LandingPage() {
     const fetchFeaturedJobs = async () => {
       try {
         setLoading(true);
-        const res = await api.get("/jobs?limit=5"); // Fetch top 5 jobs
-        setFeaturedJobs(res.data.jobs || res.data);
+        const res = await api.get("/jobs?limit=5");
+
+        // Support both backend response formats: { jobs: [...] } or [...]
+        const jobs = res.data?.jobs ?? res.data ?? [];
+        if (!Array.isArray(jobs)) throw new Error("Invalid jobs format");
+
+        setFeaturedJobs(jobs);
       } catch (err) {
         console.error(err);
         setError("Failed to load featured jobs.");
@@ -33,28 +38,34 @@ function LandingPage() {
     <>
       <Hero />
 
-      {/* Featured Jobs Section */}
       <section className="container mx-auto px-4 py-16">
         <h2 className="text-3xl font-bold mb-8 text-gray-800 text-center">
           Featured Opportunities
         </h2>
 
-        {loading ? (
+        {/* Loading skeletons */}
+        {loading && (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 5 }).map((_, idx) => (
-              <div
-                key={idx}
-                className="border rounded-md p-4 bg-gray-100 animate-pulse h-48"
-              ></div>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="rounded-lg p-4 bg-gray-200 h-48 animate-pulse"></div>
             ))}
           </div>
-        ) : error ? (
-          <p className="text-red-500 text-center">{error}</p>
-        ) : featuredJobs.length ? (
+        )}
+
+        {/* Error */}
+        {!loading && error && (
+          <p className="text-red-500 text-center mb-6">{error}</p>
+        )}
+
+        {/* Jobs */}
+        {!loading && !error && featuredJobs.length > 0 && (
           <JobList jobs={featuredJobs} />
-        ) : (
+        )}
+
+        {/* No jobs */}
+        {!loading && !error && featuredJobs.length === 0 && (
           <p className="text-center text-gray-600">
-            No featured jobs found.
+            No featured jobs available yet. Check back soon!
           </p>
         )}
 

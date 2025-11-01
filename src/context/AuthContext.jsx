@@ -5,14 +5,16 @@ import api from "../services/api";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
+  const navigate = useNavigate();
+
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem("user");
     return saved ? JSON.parse(saved) : null;
   });
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
-  // Persist user in localStorage whenever it changes
+  const [loading, setLoading] = useState(false);
+
+  // ✅ Persist user
   useEffect(() => {
     if (user) {
       localStorage.setItem("user", JSON.stringify(user));
@@ -21,12 +23,11 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user]);
 
- 
+  // ✅ Attach token to axios requests
   useEffect(() => {
     const requestInterceptor = api.interceptors.request.use(
       (config) => {
         if (user?.access) {
-          config.headers = config.headers || {};
           config.headers.Authorization = `Bearer ${user.access}`;
         }
         return config;
@@ -39,7 +40,7 @@ export const AuthProvider = ({ children }) => {
     };
   }, [user]);
 
-  // Login function
+  // ✅ Login
   const login = async (emailOrUsername, password, role) => {
     setLoading(true);
     try {
@@ -48,16 +49,20 @@ export const AuthProvider = ({ children }) => {
         password,
         role,
       });
+
       const data = res.data;
+
       setUser({
         ...data.user,
-        access: data.access_token,
+        access: data.access_token, // ✅ token key matches backend
         refresh: data.refresh_token,
       });
+
       setLoading(false);
+      navigate("/"); // ✅ redirect after login
       return { success: true };
+
     } catch (err) {
-      console.error(err);
       setLoading(false);
       return {
         success: false,
@@ -66,18 +71,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Signup function
+  // ✅ Signup (auto-login)
   const signup = async (form) => {
     setLoading(true);
     try {
       const res = await api.post("/auth/register", form);
       const { email } = res.data;
-      // Auto-login after signup
+
       const loginRes = await login(email, form.password, form.role);
       setLoading(false);
       return loginRes;
+
     } catch (err) {
-      console.error(err);
       setLoading(false);
       return {
         success: false,
@@ -86,7 +91,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout function
+  // ✅ Logout
   const logout = () => {
     setUser(null);
     navigate("/login");
@@ -99,4 +104,5 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
+// ✅ Custom hook
 export const useAuth = () => useContext(AuthContext);
